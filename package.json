@@ -1,0 +1,31 @@
+{
+  "name": "batch-thread-processor",
+  "version": "1.0.0",
+  "description": "Manges concurrent processing over multiple threads with parallel processes",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+:https://github.com/chegele/Batch-Processor"
+  },
+  "keywords": [
+    "batch",
+    "processor",
+    "worker",
+    "threads",
+    "concurrent",
+    "parallel"
+  ],
+  "author": "chegele",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/chegele/Batch-Processor/issues"
+  },
+  "homepage": "https://github.com/chegele/Batch-Processor#readme",
+  "dependencies": {
+    "fs-extra": "^10.0.0"
+  }
+
+}
