@@ -45,6 +45,12 @@ module.exports = class MainThread {
         this.workerScript = batchProcessor.config.filePath;
         this.retryFailed = batchProcessor.config.retryOnFail;
         this.recentErrors = 0;
+
+        const main = this;
+        const timeout = batchProcessor.config.timeout;
+        if (timeout) setInterval(function() {
+            main.recycleHungThreads(timeout);
+        }, timeout * 2);
     }
 
 
@@ -181,6 +187,23 @@ module.exports = class MainThread {
         }
     }
 
+    recycleHungThreads(timeout) {
+        const main = this;
+        const now = new Date();
+        for (const worker of main.workers) {
+            let hungTasks = 0;
+            for (const task of worker.currentTasks) {
+                const runtime = now - task.start;
+                if (runtime > timeout) hungTasks++;
+            }
+
+            if (hungTasks >= (main.parallelProcesses/2)) {
+                main.handleError(worker, new Error('Worker thread was hung'));
+                main.removeWorker(worker.threadId, true);
+            }
+        }
+    }
+
 
     /**
      * Determines if a worker should continue processing tasks
@@ -223,7 +246,7 @@ module.exports = class MainThread {
         const taskMessage = {type: "workNext", iterableItem: nextIterable}
         worker.postMessage(taskMessage);
         worker.sent++;
-        worker.currentTasks.push(nextIterable);
+        worker.currentTasks.push({start: new Date(), task: nextIterable});
         const processing = worker.sent - worker.received;
         if (processing < main.parallelProcesses) main.manageIdleWorker(worker);
     }
@@ -251,7 +274,7 @@ module.exports = class MainThread {
      */
     onTaskCompletion(worker, task, result) {
         const main = this;
-        removeValueFrom(worker.currentTasks, task);
+        removeObjectFrom(worker.currentTasks, "task", task);
         worker.received++;
         main.stats.processedTasks++;
         if (main.callback) main.callback(task, result);
@@ -348,8 +371,8 @@ module.exports = class MainThread {
         const main = this;
         console.log("Worker thread", worker.threadId, "encountered an error.");
         worker.currentTasks.forEach(task => {
-            main.onErrorMessage(worker, task, error);
-            main.onFailureMessage(worker, task, error);
+            main.onErrorMessage(worker, task.task, error);
+            main.onFailureMessage(worker, task.task, error);
         });
         main.stats.processedTasks++;
         main.recentErrors++;
@@ -393,8 +416,3 @@ function removeObjectFrom(array, property, value) {
     return null;
 }
 
-function removeValueFrom(array, value) {
-    const index = array.indexOf(value);
-    if (index > -1) array.splice(index, 1);
-    return index != -1;
-  }

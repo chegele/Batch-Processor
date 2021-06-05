@@ -7,6 +7,7 @@
  * @property {Boolean} [autoStart] - If the BatchProcessor should start without the user calling main.startWorking()
  * @property {String} [logLocation] - The path for saving success, failure, and error logs
  * @property {String} [iterableName] - The singular term of the iterable items being processed
+ * @property {Number} [timeout] - The number of milliseconds a task can execute before being considered hung.
  */
 
 
