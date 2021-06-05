@@ -7,7 +7,7 @@ A node.js framework for hiding worker-threads in the background. Manages concurr
 ```
 npm i batch-thread-processor
 ```
-```
+```javascript
 // Import the module
 const BatchProcessor = require('batch-thread-processor');
 
@@ -23,7 +23,7 @@ const config = {
 
 // Extend the module on your own class
 // In this example we will be processing images
-module.exports = class MyBatchImageProcessor {
+module.exports = class MyBatchImageProcessor extends BatchProcessor {
 
     constructor() {
         super();
