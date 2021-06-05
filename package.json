@@ -1,6 +1,6 @@
 {
   "name": "batch-thread-processor",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Manges concurrent processing over multiple threads with parallel processes",
   "main": "index.js",
   "scripts": {
@@ -27,5 +27,4 @@
   "dependencies": {
     "fs-extra": "^10.0.0"
   }
-
 }
