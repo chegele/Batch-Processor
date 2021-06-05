@@ -44,6 +44,7 @@ module.exports = class MainThread {
         this.parallelProcesses = batchProcessor.config.parallelProcesses;
         this.workerScript = batchProcessor.config.filePath;
         this.retryFailed = batchProcessor.config.retryOnFail;
+        this.timeout = batchProcessor.config.timeout;
         this.recentErrors = 0;
     }
 
@@ -225,7 +226,19 @@ module.exports = class MainThread {
         worker.sent++;
         worker.currentTasks.push(nextIterable);
         const processing = worker.sent - worker.received;
+        main.addTimeout(worker);
         if (processing < main.parallelProcesses) main.manageIdleWorker(worker);
+    }
+
+
+    addTimeout(worker) {
+        const main = this;
+        if (worker.timeout) clearTimeout(worker.timeout);
+        worker.timeout = setTimeout(function() {
+            for (const task of worker.currentTasks) main.onErrorMessage(worker, task, new Error('Worker thread timed out'));
+            main.removeWorker(worker.threadId, true);
+            main.addWorker();
+        }, main.timeout);
     }
 
 

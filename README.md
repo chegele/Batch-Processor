@@ -92,6 +92,7 @@ The location for your application / processing logic. This function will receive
  - {Boolean} [autoStart] - If the BatchProcessor should start without the user calling main.startWorking()
  - {String} [logLocation] - The path for saving success, failure, and error logs
  - {String} [iterableName] - The singular term of the iterable items being processed
+ - {Number} [timeout] - Timeout for execution - results in termination of the thread and creation of a new one. 
 
   
 ## API
