@@ -63,12 +63,9 @@ module.exports = class StatsTracker {
      */
     autoLog(seconds) {
         const stats = this;
-        const loop = setInterval(function() {
+        this.logInterval = setInterval(function() {
             if (stats.totalTasks > 0) {
                 stats.log();
-                if (stats.totalTasks <= stats.processedTasks) {
-                    clearInterval(loop);
-                }
             }
         }, seconds * 1000);
     }

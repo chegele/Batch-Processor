@@ -48,7 +48,7 @@ module.exports = class MainThread {
 
         const main = this;
         const timeout = batchProcessor.config.timeout;
-        if (timeout) setInterval(function() {
+        if (timeout) this.timeoutInterval = setInterval(function() {
             main.recycleHungThreads(timeout);
         }, timeout * 2);
     }
@@ -183,7 +183,8 @@ module.exports = class MainThread {
             main.assignNextTask(worker);
         } else if (worker.received >= worker.sent) {
             console.log('Worker thread', worker.threadId, 'has finished.');
-            worker.terminate();
+            main.removeWorker(worker.threadId, true);
+            if (main.workers.length < 1) main.onAllWorkAssigned();
         }
     }
 
@@ -338,6 +339,20 @@ module.exports = class MainThread {
     }
 
 
+    /**
+     * Handles cleanup after all work is assigned
+     * Clears intervals so that the module can stop
+     * Module will continue running until all workers finish assigned tasks
+     */
+    onAllWorkAssigned() {
+        console.log('All tasks have been executed. Cleaning up remaining Batch Processor loops');
+        const main = this;
+        const logLoop = main.stats.logInterval;
+        const timeoutLoop = main.timeoutInterval;
+        if (logLoop) clearInterval(logLoop);
+        if (timeoutLoop) clearInterval(timeoutLoop);
+    }
+
     //////////////////////////////////////////////////////////////
     //   MODULE EVENT HANDLERS
 
@@ -357,7 +372,7 @@ module.exports = class MainThread {
      * @param {Number} code
      */
     handleExit(worker, code) {
-        console.log("Worker thread stopped.")
+        console.log("A worker thread has stopped.")
     }
 
 
