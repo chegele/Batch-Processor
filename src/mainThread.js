@@ -91,7 +91,18 @@ module.exports = class MainThread {
         const main = this;
         if (callback == undefined) throw new Error('You must provide a callback function.');
         if (typeof(callback) != 'function') throw new Error('The callback must be a function.');
-        main.callback = callback;
+        main.workerCallback = callback;
+    }
+    
+    /**
+     * Defines a callback function to be triggered following all tasks being dispatched
+     * @param {executeCallback} callback 
+     */
+    setCompletionCallback(callback) {
+        const main = this;
+        if (callback == undefined) throw new Error('You must provide a callback function.');
+        if (typeof(callback) != 'function') throw new Error('The callback must be a function.');
+        main.completionCallback = callback;
     }
 
 
@@ -141,7 +152,7 @@ module.exports = class MainThread {
     startWorking(iterable, callback) {
         const main = this;
         if (iterable) main.setIterable(iterable);
-        if (callback) main.callback = callback;
+        if (callback) main.setWorkerCallback(callback)
         if (!main.iterable) throw new Error('You must provide a list of iterable items to process before startWorking.');
         main.stats.startTime = new Date();
         main.stats.totalTasks = main.iterable.length;
@@ -278,7 +289,7 @@ module.exports = class MainThread {
         removeObjectFrom(worker.currentTasks, "task", task);
         worker.received++;
         main.stats.processedTasks++;
-        if (main.callback) main.callback(task, result);
+        if (main.workerCallback) main.workerCallback(task, result);
         main.manageIdleWorker(worker);
     }
 
@@ -351,6 +362,8 @@ module.exports = class MainThread {
         const timeoutLoop = main.timeoutInterval;
         if (logLoop) clearInterval(logLoop);
         if (timeoutLoop) clearInterval(timeoutLoop);
+        main.stats.log();
+        if (main.completionCallback) main.completionCallback();
     }
 
     //////////////////////////////////////////////////////////////

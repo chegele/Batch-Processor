@@ -36,6 +36,7 @@ module.exports = class BatchProcessor {
             // If this is the main thread instance, initialize and start sending tasks
             if (this.main) {
                 await this.prepareMainThread();
+                this.main.setCompletionCallback(this.onBatchComplete);
                 if (config.autoStart) this.main.startWorking();
             }  
             
@@ -58,6 +59,9 @@ module.exports = class BatchProcessor {
 
     /** You can override this method to complete work before each worker thread starts */
     async prepareWorkerThread() { }
+
+    /** you can override this method to perform cleanup after all tasks have been processed */
+    onBatchComplete() { }
 
 
     /**

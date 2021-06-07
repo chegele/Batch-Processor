@@ -3,7 +3,7 @@
 A node.js framework for hiding worker-threads in the background. Manages concurrent processing on multiple threads and/or with parallel executions per thread. 
 
   
-## Installation and use
+## Installation and Example
 ```
 npm i batch-thread-processor
 ```
@@ -24,16 +24,14 @@ const config = {
 
 // Extend the module on your own class
 // In this example we will be processing images
-module.exports = class MyBatchImageProcessor extends BatchProcessor {
+class MyBatchImageProcessor extends BatchProcessor {
 
     constructor() {
         super();
         this.initialize(config, __filename);
-        // Use prepareMainThread as the constructor method for the main thread
-        // Use prepareWorkerThread as the constructor for worker threads
     }
 
-    // this will be ran once on the main thread which manages dispatching work to worker threads
+    /** @override - Use as an async constructor for the main thread */
     async prepareMainThread() {
 
         // Retrieve our iterable list here
@@ -52,13 +50,13 @@ module.exports = class MyBatchImageProcessor extends BatchProcessor {
         });
     }
 
-    // This will be ran once each time a thread is created
+    /** @override - Use as an async constructor for the worker threads */
     async prepareWorkerThread() {
         // Setup dependencies that need to be available to processing threads
         this.imageConverter = require('./myImageConverter');
     }
 
-    // This will be executed by worker threads
+    /** @override - Main application processing */
     async execute(file) {
         try {
             const convertedImage = await this.imageConverter.pngToJpg(file);
@@ -67,8 +65,17 @@ module.exports = class MyBatchImageProcessor extends BatchProcessor {
         } catch(err) {
             this.worker.recordFailure(file, err.message);
         }
-        
     }
+
+    /** @override - Run some cleanup after batch processing completes */
+    onBatchComplete() {
+        console.log('All done!');
+    }
+
+// Make sure you export an instance of this class, and not the class itself
+// This is needed for the worker threads to start appropriately
+module.exports  = new MyBatchImageProcessor();
+
 }
 ```
 
@@ -84,6 +91,9 @@ This functions will run each time a new thread is created. A good use of this fu
 
 ### **execute**
 The location for your application / processing logic. This function will receive 1 parameter, which is a single iteration from the list set in the prepareMainThread function. This item will be available to you so that it can be processed however necessary. This function will continue to be called after each return until all of the configured iterable items have been executed with this function.
+
+### **onBatchComplete**
+Optionally allows you to define what your application should do once all batch processing has been completed.
 
   
 ## Configuration
@@ -107,6 +117,9 @@ Note: These endpoints are only accessible within prepareMainThread or outside of
 **main.setWorkerCallback(callback)** *- Defines a callback function for handling the result of a completed worker execution.*  
  @param {executeCallback} callback - Executes after the main thread receives a "complete" message  
 
+ **main.setCompletionCallback()** *- Defines a callback function to be triggered following all tasks being dispatched.*
+ @param {executeCallback} callback - Executes after all iterable items have been passed to worker
+
 **main.addWorker()** *- Adds an extra worker thread for the Batch Processor*  
  @returns {Number} The threadId of the new worker  
 
@@ -115,13 +128,13 @@ Note: These endpoints are only accessible within prepareMainThread or outside of
  @param {Boolean | undefined} [immediate] Optionally remove the worker before it finishes the current iteration  
  @returns {Boolean} If a worker was selected to be removed (The worker has not yet been removed)  
 
-**startWorking(iterable, callback)** *- Completes setup of the main thread and begins sending tasks to the worker threads.*  
+**main.startWorking(iterable, callback)** *- Completes setup of the main thread and begins sending tasks to the worker threads.*  
  This method needs to be called if autoStart is not configured to be true  
  Can be used to resume processing after main.stopWorking has been called  
  @param {Iterable} [iterable] (main.setIterable) The list of items to be processed by workers  
  @param {executeCallback} [callback] (main.setCallback) Function for handling the result of a completed worker execute  
 
-**stopWorking(immediate)** *- Stops processing of additional tasks, but in a resumable state which can be continued with main.startWorking()*  
+**main.stopWorking(immediate)** *- Stops processing of additional tasks, but in a resumable state which can be continued with main.startWorking()*  
  @param {Boolean} [immediate] Stop workers without waiting for completion of their current task(s)  
 
  **main.stats.log()** *- Generates a simple display of all available statistics.*  
