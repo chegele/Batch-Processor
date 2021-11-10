@@ -139,8 +139,10 @@ module.exports = class MainThread {
         const main = this;
         let worker = threadId ? removeObjectFrom(main.workers, 'threadId', threadId) : main.workers.pop();
         if (!worker) return false;
-        console.log('Stopping worker thread', worker.threadId);
-        return immediate ? worker.terminate() : worker.stopping = true;
+        console.log(`Stopping worker thread ${worker.threadId}...`);
+        const result = immediate ? worker.terminate() : worker.stopping = true;
+        console.log(`Stopped worker thread ${worker.threadId || worker.threadId}.`);
+        return result;
     }
 
 
@@ -199,6 +201,11 @@ module.exports = class MainThread {
         }
     }
 
+    /**
+     * Checks for hung threads by comparing the start time of a task to the timeout
+     * If half of the tasks for a worker have exceeded a the timeout the worker is stopped
+     * @param {Number} timeout 
+     */
     recycleHungThreads(timeout) {
         const main = this;
         const now = new Date();
@@ -209,9 +216,8 @@ module.exports = class MainThread {
                 if (runtime > timeout) hungTasks++;
             }
 
-            if (hungTasks >= (main.parallelProcesses/2)) {
+            if (hungTasks >= (worker.currentTasks.length/2)) {
                 main.handleError(worker, new Error('Worker thread was hung'));
-                main.removeWorker(worker.threadId, true);
             }
         }
     }
@@ -385,7 +391,10 @@ module.exports = class MainThread {
      * @param {Number} code
      */
     handleExit(worker, code) {
-        console.log("A worker thread has stopped.")
+        const main = this;
+        const codeInfo = code ? ` with code ${code}` : "";
+        const remaining = main.workers.length > 0 ? ` There are still ${main.workers.length} workers running.` : " There are no running workers.";
+        console.log(`A worker thread has stopped${codeInfo}.${remaining}`);
     }
 
 
@@ -397,7 +406,8 @@ module.exports = class MainThread {
     handleError(worker, error) {
         error.message = "Thread crashed - " + error.message;
         const main = this;
-        console.log("Worker thread", worker.threadId, "encountered an error.");
+        const time = '[' + new Date().toLocaleString() + '] ';
+        console.log(time + "Worker thread", worker.threadId, "encountered an error.");
         worker.currentTasks.forEach(task => {
             main.onErrorMessage(worker, task.task, error);
             main.onFailureMessage(worker, task.task, error);
@@ -406,7 +416,10 @@ module.exports = class MainThread {
         main.recentErrors++;
         setTimeout(() => main.recentErrors--, 5000);
         if (main.recentErrors > 5) throw new Error('Five worker threads have crashed within 5 seconds. Canceling execution');
-        main.addWorker();
+        if (worker.threadId) {
+            main.removeWorker(worker.threadId, true);
+            main.addWorker();
+        }
     }
 
 
